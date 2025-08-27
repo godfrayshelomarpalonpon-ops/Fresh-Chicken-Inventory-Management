@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Word Input Form</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    input, button {
+      padding: 8px;
+      font-size: 16px;
+      margin: 5px 0;
+    }
+    ul {
+      margin-top: 15px;
+    }
+    .correct {
+      color: green;
+      font-weight: bold;
+    }
+    .incorrect {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Enter Words</h2>
+
+  <form id="wordForm" action="/submit" method="POST">
+    <input type="text" id="wordInput" placeholder="Enter a word" required>
+    <div id="throttleLog" class="log"></div>
+    <div id="debounceLog" class="log"></div>
+    <br>
+    <button type="button" id="addBtn">Add Word</button>
+
+    <div id="hiddenInputs"></div>
+  </form>
+
+  <h3>Word List:</h3>
+  <ul id="wordList"></ul>
+
+  <h3>Search Word in List:</h3>
+  <input type="text" id="searchInput" placeholder="Search word">
+  <button type="button" id="searchBtn">Check Word</button>
+  <p id="searchResult"></p>
+
+  <script>
+    const addBtn = document.getElementById('addBtn');
+    const wordInput = document.getElementById('wordInput');
+    const wordList = document.getElementById('wordList');
+    const hiddenInputs = document.getElementById('hiddenInputs');
+
+    // List of valid words
+    const validWords = ['apple', 'banana', 'cherry', 'grape', 'orange', 'pear', 'peach', 'shelomar bayot', 'ball'];
+
+    addBtn.addEventListener('click', function () {
+      const word = wordInput.value.trim().toLowerCase();
+      if (word) {
+        const isValid = validWords.includes(word);
+
+        // Add to visible list (word only, no correctness indicator)
+        const li = document.createElement('li');
+        li.setAttribute('data-word', word);
+        li.setAttribute('data-status', isValid ? 'correct' : 'incorrect');
+        li.textContent = word; // Only show the word, no ✅ or ❌
+        wordList.appendChild(li);
+
+        // Add hidden input to send on form submit
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'word[]';
+        input.value = word;
+        hiddenInputs.appendChild(input);
+
+        // Clear input
+        wordInput.value = '';
+        wordInput.focus();
+      }
+    });
+
+    function debounce(fn, delay) {
+      let timer;
+      return function (...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), delay);
+      };
+    }
+
+    function throttle(fn, limit) {
+      let lastCall = 0;
+      return function (...args) {
+        const now = Date.now();
+        if (now - lastCall >= limit) {
+          lastCall = now;
+          fn.apply(this, args);
+        }
+      };
+    }
+
+    const input = document.getElementById('wordInput');
+    const throttleLog = document.getElementById('throttleLog');
+    const debounceLog = document.getElementById('debounceLog');
+
+    const handleThrottle = throttle((e) => {
+      throttleLog.innerHTML = `<b>Throttle:</b> Typing... "${e.target.value}"`;
+    }, 1000);
+
+    const handleDebounce = debounce((e) => {
+      debounceLog.innerHTML = `<b>Debounce:</b> Finished typing: "${e.target.value}"`;
+    }, 500);
+
+    input.addEventListener('keyup', (e) => {
+      handleThrottle(e);
+      handleDebounce(e);
+    });
+
+    // SEARCH FUNCTIONALITY
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const searchResult = document.getElementById('searchResult');
+
+    searchBtn.addEventListener('click', function () {
+      const searchWord = searchInput.value.trim().toLowerCase();
+      if (!searchWord) {
+        searchResult.textContent = 'Please enter a word to search.';
+        searchResult.style.color = 'black';
+        return;
+      }
+
+      const listItems = wordList.getElementsByTagName('li');
+      let status = null;
+
+      for (let item of listItems) {
+        if (item.getAttribute('data-word') === searchWord) {
+          status = item.getAttribute('data-status');
+          break;
+        }
+      }
+
+      if (status === 'correct') {
+        searchResult.textContent = `✅ "${searchWord}" is in the list.`;
+        searchResult.style.color = 'green';
+      } else if (status === 'incorrect') {
+        searchResult.textContent = `❌ "${searchWord}" is Incorrect.`;
+        searchResult.style.color = 'red';
+      } else {
+        searchResult.textContent = `⚠️ "${searchWord}" is not in the list.`;
+        searchResult.style.color = 'gray';
+      }
+
+      searchInput.value = '';
+    });
+  </script>
+
+</body>
+</html>
